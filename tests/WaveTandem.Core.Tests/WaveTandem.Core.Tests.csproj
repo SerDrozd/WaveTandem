@@ -8,7 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\WaveTandem.Core\WaveTandem.Core.csproj" />
-    <PackageReference Include="xunit.v3" Version="3.1.0" />
+    <PackageReference Include="xunit.v3" Version="4.0.3" />
     <Using Include="Xunit" />
   </ItemGroup>
 </Project>
