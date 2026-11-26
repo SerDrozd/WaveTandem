@@ -1,0 +1,48 @@
+name: Release
+on:
+  push:
+    tags: ['v*.*.*']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Validate release version
+        run: |
+          $version = ([xml](Get-Content src/WaveTandem.App/WaveTandem.App.csproj -Raw)).Project.PropertyGroup.Version
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw "Tag must match v$version." }
+      - name: Start Windows audio services
+        run: |
+          foreach ($name in 'AudioEndpointBuilder','Audiosrv') {
+            if ((Get-Service $name).Status -ne 'Running') { Start-Service $name }
+          }
+      - run: ./scripts/build.ps1 -Generator 'Visual Studio 18 2026' -Package
+      - uses: actions/upload-artifact@v6
+        with:
+          name: release-files
+          path: out/dist/*
+          if-no-files-found: error
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: release-files
+      - name: Publish unsigned Windows distribution
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha256sum -c WaveTandem-win-x64.zip.sha256
+          gh release create "$GITHUB_REF_NAME" WaveTandem-win-x64.zip WaveTandem-win-x64.zip.sha256 \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes

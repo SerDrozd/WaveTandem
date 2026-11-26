@@ -1,0 +1,28 @@
+name: Audio or device problem
+description: Report a playback, delay, or reconnection problem
+title: "[Audio] "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: WaveTandem version and Windows build
+    validations:
+      required: true
+  - type: textarea
+    id: devices
+    attributes:
+      label: Playback devices and connection types
+      description: Include the main and additional devices and whether Windows Shared Audio was active.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps, expected result, and actual result
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Audio diagnostics
+      description: Include any HRESULT, gaps and reconnect counts. Remove private device names if needed.

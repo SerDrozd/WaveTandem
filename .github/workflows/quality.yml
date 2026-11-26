@@ -1,0 +1,54 @@
+name: Code and dependency quality
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '28 4 * * 2'
+permissions:
+  contents: read
+jobs:
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          deny-licenses: AGPL-3.0, AGPL-3.0-only, AGPL-3.0-or-later, SSPL-1.0
+  codeql:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [c-cpp, csharp]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        if: matrix.language == 'csharp'
+        with:
+          dotnet-version: 10.0.x
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: manual
+      - name: Build native audio engine
+        if: matrix.language == 'c-cpp'
+        run: |
+          cmake -S native -B out/native -G 'Visual Studio 18 2026' -A x64 -DBUILD_TESTING=OFF
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --build out/native --config Release --parallel
+      - name: Build managed desktop app
+        if: matrix.language == 'csharp'
+        run: dotnet build src/WaveTandem.App -c Release
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: '/language:${{ matrix.language }}'
