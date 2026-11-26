@@ -1,0 +1,8 @@
+.tools/
+out/
+.vs/
+bin/
+obj/
+TestResults/
+*.user
+*.zip
