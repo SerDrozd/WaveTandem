@@ -27,7 +27,7 @@ jobs:
           }
       - name: Build, test, and package
         run: ./scripts/build.ps1 -Generator 'Visual Studio 18 2026' -Package
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: WaveTandem-win-x64
           path: out/dist/*
