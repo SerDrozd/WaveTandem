@@ -43,6 +43,7 @@ struct Output {
     explicit Output(std::wstring endpoint) : id(std::move(endpoint)) {}
     const std::wstring id;
     Ring input{fifo_capacity};
+    ResamplingKernel kernel;
     Counters stats;
     std::atomic<bool> enabled{true};
     std::atomic<float> gain{1};
@@ -78,11 +79,9 @@ struct se_session {
         return nullptr;
     }
 
-    uint32_t capture_rate() const noexcept { return rate.load(std::memory_order_relaxed); }
-
     void reset_capture(uint32_t next_rate) noexcept {
-        rate.store(next_rate, std::memory_order_relaxed);
-        epoch.fetch_add(1, std::memory_order_release);
+        const auto next_epoch = (capture_format.load(std::memory_order_relaxed) >> 32) + 1;
+        capture_format.store((next_epoch << 32) | next_rate, std::memory_order_release);
     }
 
     HRESULT run_capture(bool& previously_streamed) {
@@ -176,13 +175,14 @@ struct se_session {
         previously_streamed = true;
         output.stats.set(SE_STREAMING);
 
-        auto last_epoch = epoch.load(std::memory_order_acquire);
+        auto last_format = capture_format.load(std::memory_order_acquire);
         auto last_overruns = output.stats.overruns.load();
         auto last_delay = output.delay.load();
         const auto render_rate = stream.format.rate;
         const auto period_ms = milliseconds(stream.period_frames, render_rate);
         const uint32_t base_ms = std::clamp(static_cast<uint32_t>(period_ms * 3), 60u, 200u);
         Resampler resampler;
+        uint32_t kernel_rate = 0;
         bool primed = false;
         output.input.clear();
         MultimediaThread priority;
@@ -194,21 +194,30 @@ struct se_session {
             const auto frames = stream.buffer_frames - padding;
             if (!frames) continue;
 
-            const auto current_epoch = epoch.load(std::memory_order_acquire);
+            const auto format = capture_format.load(std::memory_order_acquire);
             const auto overruns = output.stats.overruns.load();
             const auto delay = output.delay.load();
-            const auto input_rate = capture_rate();
+            const auto input_rate = static_cast<uint32_t>(format);
+            const auto nominal_step = static_cast<double>(input_rate) / render_rate;
+            if (input_rate && kernel_rate != input_rate) {
+                output.kernel.configure(nominal_step);
+                kernel_rate = input_rate;
+            }
             const auto target = input_rate ? target_frames(input_rate, delay, base_ms) : 0;
             const auto queue = output.input.available();
-            if (current_epoch != last_epoch || overruns != last_overruns) {
+            if (format != last_format || overruns != last_overruns) {
                 output.input.clear();
+                resampler.reset();
+                primed = false;
+            } else if (delay > last_delay) {
+                // Pause until the queue reaches the new delay in one bounded adjustment.
                 resampler.reset();
                 primed = false;
             } else if (input_rate && (delay < last_delay || queue > target + input_rate / 5)) {
                 if (queue > target) output.input.consume(queue - target);
                 resampler.reset();
             }
-            last_epoch = current_epoch;
+            last_format = format;
             last_overruns = overruns;
             last_delay = delay;
             const auto ready = output.input.available();
@@ -220,7 +229,7 @@ struct se_session {
                 resampler.adjust(milliseconds(ready, input_rate) - milliseconds(target, input_rate),
                     static_cast<float>(frames) / static_cast<float>(render_rate));
                 const float gain = output.gain.load(std::memory_order_relaxed);
-                rendered = resampler.render(output.input, frames, static_cast<double>(input_rate) / render_rate,
+                rendered = resampler.render(output.input, frames, nominal_step, output.kernel,
                     [&](uint32_t index, Frame frame) {
                         stream.format.write(buffer + static_cast<size_t>(index) * stream.format.stride,
                             {frame.left * gain, frame.right * gain});
@@ -278,8 +287,8 @@ struct se_session {
 
     const std::wstring source;
     Event stop;
-    std::atomic<uint32_t> rate{0}, count{0};
-    std::atomic<uint64_t> epoch{0};
+    std::atomic<uint32_t> count{0};
+    std::atomic<uint64_t> capture_format{0};
     Counters source_stats;
     std::array<std::unique_ptr<Output>, max_outputs> outputs;
     std::thread capture;

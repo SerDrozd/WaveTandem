@@ -1,6 +1,6 @@
 #pragma once
 #include "dsp.h"
-#include "syncear.h"
+#include "wavetandem.h"
 #include <windows.h>
 #include <audioclient.h>
 #include <mmdeviceapi.h>

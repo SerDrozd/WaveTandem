@@ -32,7 +32,7 @@ HRESULT Format::set(const WAVEFORMATEX& wave) noexcept {
         const auto& extended = reinterpret_cast<const WAVEFORMATEXTENSIBLE&>(wave);
         float_ = extended.SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
         pcm = extended.SubFormat == KSDATAFORMAT_SUBTYPE_PCM;
-        valid_bits_ = extended.Samples.wValidBitsPerSample;
+        if (extended.Samples.wValidBitsPerSample) valid_bits_ = extended.Samples.wValidBitsPerSample;
         mask = extended.dwChannelMask;
     }
     const bool bit_depth = (float_ && bytes_ == 4 && valid_bits_ == 32) ||
