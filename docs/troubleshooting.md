@@ -2,7 +2,7 @@
 
 ## No sound through the listeners
 
-Play a known local file. Confirm it reaches the main output in Windows and make sure the listener is checked, connected, and unmuted. If Windows uses another default output, use Windows Sound settings to route the player to the selected main output. Verify Windows can play directly to each listener.
+Play a known local file and check the signal next to the source selector. If WaveTandem detects silence, make sure the player uses that device in Windows. If it detects audio, make sure the listener is checked, connected, and audible. While sharing, use **Test sound** on that listener. If you hear the test, the output path is open. If the test is inaudible, check the device volume and whether Windows can play directly to it.
 
 For Bluetooth, reconnect the headset and check that its media playback endpoint is active. Microphone use may switch the headset profile. If Windows creates a new endpoint when pairing again, select it in WaveTandem.
 
@@ -14,4 +14,4 @@ Open **Diagnostics** and check recent reconnects, gaps, overflow and queue depth
 
 Extract the complete x64 ZIP before opening the app. The native DLL must be next to the executable. If Windows audio is unavailable across apps, check the Windows Audio service with the system administrator. For settings errors, close WaveTandem and copy the existing settings file before moving it aside to start with defaults.
 
-When opening an issue, include the app and Windows versions, endpoint types, repro steps and any HRESULT displayed under diagnostics. Remove personal device names before sharing logs.
+Use **Copy support report** in Diagnostics to copy the app version, Windows version, stream states, error codes and queue counters. The copied report omits device names and identifiers. Add connection types and reproduction steps when opening an issue.

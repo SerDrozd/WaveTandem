@@ -16,7 +16,7 @@ On 26 November 2026, the Windows x64 Release build, two native CTest suites, ten
 1. Connect two output endpoints. Play a click track on the first endpoint shown by enumeration. Run `out/native/Release/endpoint_smoke.exe --routing`. The test checks capture timestamps, an active secondary stream and rejection of a feedback route. It opens up to three additional outputs at 5% volume.
 2. Repeat with at least three endpoints, including different formats or sample rates. Use the GUI to confirm that each copy is audible, mute and change one gain without changing the others, and compare timing with the [calibration guide](latency.md).
 3. Disconnect one output and watch the others continue. Reconnect the original endpoint and confirm the reconnect counter changes once. Test a re-paired endpoint with a different ID and confirm that selecting it requires a user action.
-4. Change the Windows default and verify the selected source remains pinned. Suspend and resume Windows. In a disposable test environment, restart the Windows Audio service. Check recovery and that closing the app releases all clients.
+4. Change the Windows default with a fixed source and verify the selected source remains pinned. Repeat with **Follow Windows default**, first switching to a previously selected listener. Check that the new source is excluded from the regenerated listener route. Pause copies, switch again, and verify that pause persists. Suspend and resume Windows. In a disposable environment, restart the Windows Audio service.
 5. Stop and start repeatedly, including during device enumeration and recovery. Check close-to-tray, tray Stop and tray Exit.
 
 ## Stability
@@ -26,6 +26,8 @@ Run each proposed hardware pairing for at least an hour. Record Windows build, d
 ## UI and release
 
 For a Windows desktop with a playback endpoint, use the visual smoke harness to render the live application view at its default size and at a narrow size and to check localized resources.
+
+The harness also runs a simulated routing scenario to cover source signal state, per-listener test signals, pause, default-output changes, report redaction, and saving and reopening a listening setup.
 
 ```powershell
 $native = (Resolve-Path out/native/Release/WaveTandemAudio.dll).Path

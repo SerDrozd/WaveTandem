@@ -1,59 +1,61 @@
 # WaveTandem
 
-WaveTandem shares the sound already playing on a Windows output with other connected headphones, speakers, or audio interfaces. The main device keeps playing normally. Each additional listener gets independent volume, mute, and saved timing settings.
+**Share the sound from one Windows playback device with other headphones or speakers.**
 
-The app is a portable, driver-free Windows desktop program. Development began on 12 November 2026 under the working name SyncEar. The Git history begins on 26 November 2026.
+Use your laptop speakers and a headset together, or listen on a mix of USB, wired, and Bluetooth devices that Windows can play to at the same time. WaveTandem runs locally and uses the playback devices you already have.
 
-![WaveTandem on first launch with one Windows playback device connected](docs/images/sharing-light.png)
+![WaveTandem in the light theme with the source selector, signal status, listener list and sharing controls](docs/images/sharing-light.png)
 
-[Dark theme at a narrower window size](docs/images/sharing-dark-uk.png).
+[Dark theme](docs/images/sharing-dark-uk.png) · [Releases](https://github.com/SerDrozd/WaveTandem/releases) · [Troubleshooting](docs/troubleshooting.md) · [Build from source](#build-and-test)
 
-## Quick start
+## Start listening
 
-1. Connect at least two playback devices in Windows and play audio on one of them.
-2. Extract the entire Windows x64 archive and open `WaveTandem.exe`.
-3. Choose the device that is already playing as the main output.
-4. Select the other listeners and choose **Start sharing**.
-5. Open **Show timing controls** to adjust extra delay on an earlier listener. Use **Diagnostics** to check queue, drift and reconnect information.
+1. Connect two playback devices in **Windows → Settings → System → Sound**. Play something on one of them.
+2. Extract the entire x64 ZIP and open `WaveTandem.exe`. The portable ZIP includes the .NET desktop runtime.
+3. Under **Audio source**, select the device already playing. Enable **Follow Windows default** if you want WaveTandem to follow the Windows playback selection.
+4. Under **Listen on**, check the other devices and press **Start sharing**. You can also press **Ctrl+Enter** while the window has focus.
+5. Check the source signal and try **Test sound** on an enabled listener if you hear nothing there.
 
-Use the x64 ZIP and checksum from [Releases](https://github.com/SerDrozd/SyncEar/releases) when a version is published. Verify the archive with `Get-FileHash .\WaveTandem-win-x64.zip -Algorithm SHA256` and compare it with the adjacent `.sha256` file. The archive includes the .NET desktop runtime. Builds are unsigned.
+**Source** is where Windows already plays the sound. **Listener** is an additional device that receives a copy.
 
-## Features
+## Everyday controls
 
-- One main output and up to 16 additional endpoint profiles per session.
-- Per-listener volume, mute and 0–500 ms extra delay.
-- Recovery for a previously selected endpoint that returns with the same Windows ID.
-- Drift correction through adaptive resampling, with status and software delay estimates.
-- English, Russian and Ukrainian, with Windows, light and dark appearances.
-- Optional sharing from the notification area after closing the window.
+| What you want to do | Where to do it |
+| --- | --- |
+| Find why you hear nothing | Read the source signal status. If the source has signal, use **Test sound** on the connected, unmuted listener to check its playback path. |
+| Pause everyone else while your own sound continues | Use **Pause copies** in the window or tray menu. Resume keeps the listener volume, mute and delay settings. |
+| Swap your main headset as Windows switches devices | Enable **Follow Windows default** before starting. WaveTandem rebuilds the route when Windows changes its default and excludes the new source from the listeners. |
+| Set different levels for two people | Use the volume and mute controls on each checked listener. These change the copies sent by WaveTandem. |
+| Reduce an audible echo between listeners | Open the timing controls. Play a series of clicks and add delay to an additional output that you hear early. |
+| Reuse a setup for a film, desk or set of headphones | In **Saved setups**, save the source choice, listeners, volume, mute and delay while sharing is off. Load the setup, confirm the connected devices, then start sharing. |
+| Share enough information to get help | In **Diagnostics**, use **Copy support report** for stream states, queue metrics and error codes with device names and IDs omitted. |
 
-## How it works
+Selected devices reopen after reconnecting with the same Windows endpoint ID. If Windows assigns a replacement ID, select that endpoint. Choose **Light** or **Dark** in Settings. The interface is available in English, Russian and Ukrainian.
 
-WASAPI loopback reads the selected endpoint's shared-mode playback mix. A C++20 engine converts it to stereo float and publishes frames to bounded queues. Each output drains its own queue at the rate of its audio device. A feedback controller adjusts the resampling ratio to keep the queue near its target. The WPF app uses a versioned native C ABI to configure listeners and display diagnostics. Read the [architecture](docs/architecture.md), [audio pipeline](docs/audio-pipeline.md), and [synchronization design](docs/synchronization.md).
+## Compatibility and timing
 
-## Compatibility
-
-The target is x64 Windows 11, with the same WASAPI APIs available on Windows 10 22H2. USB, wired, Bluetooth Classic and Bluetooth LE Audio devices are usable when Windows exposes active playback endpoints and the PC can sustain their simultaneous playback. Compatibility depends on the adapter, drivers and devices. See the [hardware test matrix](docs/device-compatibility.md) for verification status.
-
-If your Windows Quick Settings includes **Shared Audio** and both headsets support it, Windows can share directly using Bluetooth LE Audio broadcast. [Microsoft Shared Audio documentation](https://support.microsoft.com/en-au/servicing/os/windows-11/2026/05/may-26-2026-kb5089573-os-builds-26200-8524-and-26100-8524-preview).
+- The target is **Windows 11 x64**. The same WASAPI APIs are available on Windows 10 22H2. See the [device matrix](docs/device-compatibility.md) for the verification status.
+- Windows must expose separate playback devices and be able to play to them simultaneously. If your PC already offers **Shared Audio** and two compatible Bluetooth LE Audio accessories, you can use Quick Settings to share directly. [Microsoft Shared Audio](https://techcommunity.microsoft.com/blog/windowsosplatform/share-the-moment-listen-together-with-shared-audio/4522401).
+- WaveTandem reads the shared mix on a selected output. Protected audio and playback that bypasses the shared mix may be absent. [WASAPI loopback](https://learn.microsoft.com/en-us/windows/win32/coreaudio/loopback-recording).
+- Drift correction keeps per-output queues stable. The reported delay estimates **software buffering**. Bluetooth transport and acoustic delay vary by device. The source’s direct Windows playback cannot be delayed by WaveTandem. [Timing and calibration](docs/latency.md).
 
 ## Build and test
 
-Use PowerShell 7, .NET 10 SDK, CMake 3.24 or later, Visual Studio 2022 C++ Build Tools and a Windows 10/11 SDK. For Visual Studio 2026, pass `-Generator 'Visual Studio 18 2026'` with a version of CMake that supports it.
+Use PowerShell 7, .NET 10 SDK, CMake 3.24 or later, the Visual Studio 2022 C++ Build Tools, and a Windows SDK. With Visual Studio 2026 and a CMake version that supports it, pass `-Generator 'Visual Studio 18 2026'`.
 
 ```powershell
 ./scripts/check.ps1
 ./scripts/build.ps1 -Package
 ```
 
-The Release build uses MSVC warnings and static analysis. The script runs the native DSP and endpoint tests and the xUnit settings tests before creating the ZIP in `out/dist`. See [testing](docs/testing.md) for benchmarks, visual checks, hardware verification and long-run measurements.
+The script builds the C++20 engine and WPF application, runs CTest and xUnit, and creates `out/dist/WaveTandem-win-x64.zip` with a SHA-256 sidecar. Archives are unsigned. Run `Get-FileHash .\WaveTandem-win-x64.zip -Algorithm SHA256` to compare the ZIP with its sidecar. See the [verification guide](docs/testing.md) for the UI smoke harness, routing, and hardware tests.
 
-## Settings, timing, and troubleshooting
+## How it works
 
-Preferences live in `%LOCALAPPDATA%\WaveTandem\settings.json`. Profiles use Windows endpoint IDs, so plugging a device into a different port or pairing it again may require selecting its replacement. The app can keep the selected source after the Windows default changes. Route the player to that source, or stop and choose the new default output.
+A WASAPI loopback worker reads the source. Each listener has a bounded queue, its own resampler and its own WASAPI render stream. A feedback controller adjusts each resampling ratio independently. The WPF app talks to the native engine through a versioned C ABI. [Architecture](docs/architecture.md) · [Audio pipeline](docs/audio-pipeline.md) · [Synchronization](docs/synchronization.md).
 
-Software delay is estimated from queued frames. Bluetooth transport and acoustic latency vary by device. Use the [calibration guide](docs/latency.md) to tune devices. If the main device is the earliest audible device, the app cannot delay its direct Windows playback. Protected content and streams that bypass the shared mix may be absent from loopback. See [troubleshooting](docs/troubleshooting.md).
+Audio stays in memory on the PC. Settings are saved under `%LOCALAPPDATA%\WaveTandem`. The application requires no account and sends no audio or telemetry over the network.
 
-## Privacy and project information
+[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Roadmap](docs/roadmap.md) · [MIT license](LICENSE)
 
-Audio remains in memory on the PC. The app stores settings locally and uses no account, upload or telemetry. The most recent diagnostic events stay in memory during the run. See [security reporting](SECURITY.md), [contributing](CONTRIBUTING.md), the [roadmap](docs/roadmap.md), and the [MIT license](LICENSE).
+Development began on 12 November 2026 under the name SyncEar. The Git history begins on 26 November 2026.
