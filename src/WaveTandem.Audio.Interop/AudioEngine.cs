@@ -64,7 +64,18 @@ public sealed class AudioEngine : IAudioEngine
             Check(NativeMethods.se_output_status(session, id, out var status), "status");
             outputs[id] = status.ToStatus();
         }
-        return new(source.ToStatus(), outputs);
+        Check(NativeMethods.se_source_signal(session, out var present), "signal");
+        return new(source.ToStatus(), outputs, present != 0);
+    }
+
+    public void SetPaused(bool paused)
+    {
+        if (session is not null) Check(NativeMethods.se_set_paused(session, paused ? 1u : 0u), "pause");
+    }
+
+    public void TestOutput(string id)
+    {
+        if (session is not null) Check(NativeMethods.se_test_output(session, id), "test");
     }
 
     public void Stop()
@@ -81,7 +92,7 @@ public sealed class AudioEngine : IAudioEngine
         if (verified) return;
         try
         {
-            if (NativeMethods.se_abi_version() != 1)
+            if (NativeMethods.se_abi_version() != 2)
                 throw new AudioException("library", unchecked((int)0x8007000B));
         }
         catch (Exception error) when (error is DllNotFoundException or BadImageFormatException or EntryPointNotFoundException)

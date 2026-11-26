@@ -62,4 +62,16 @@ internal static class NativeMethods
     [DllImport(Library, ExactSpelling = true, CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.AssemblyDirectory | DllImportSearchPath.System32)]
     internal static extern int se_output_status(SessionHandle session, string endpoint, out NativeStatus status);
+
+    [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.AssemblyDirectory | DllImportSearchPath.System32)]
+    internal static extern int se_set_paused(SessionHandle session, uint paused);
+
+    [DllImport(Library, ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.AssemblyDirectory | DllImportSearchPath.System32)]
+    internal static extern int se_source_signal(SessionHandle session, out uint present);
+
+    [DllImport(Library, ExactSpelling = true, CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.AssemblyDirectory | DllImportSearchPath.System32)]
+    internal static extern int se_test_output(SessionHandle session, string endpoint);
 }

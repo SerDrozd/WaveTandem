@@ -48,6 +48,7 @@ struct Output {
     std::atomic<bool> enabled{true};
     std::atomic<float> gain{1};
     std::atomic<uint32_t> delay{0};
+    std::atomic<uint64_t> test_before{0};
     std::thread thread;
 };
 
@@ -82,6 +83,7 @@ struct se_session {
     void reset_capture(uint32_t next_rate) noexcept {
         const auto next_epoch = (capture_format.load(std::memory_order_relaxed) >> 32) + 1;
         capture_format.store((next_epoch << 32) | next_rate, std::memory_order_release);
+        if (!next_rate) last_signal.store(0, std::memory_order_relaxed);
     }
 
     HRESULT run_capture(bool& previously_streamed) {
@@ -123,11 +125,14 @@ struct se_session {
                     source_stats.position.store(position);
                     source_stats.timestamp.store(timestamp);
                 }
+                bool signal = false;
                 for (uint32_t offset = 0; offset < frames;) {
                     const auto chunk = std::min(frames - offset, static_cast<uint32_t>(decoded.size()));
-                    for (uint32_t frame = 0; frame < chunk; ++frame)
+                    for (uint32_t frame = 0; frame < chunk; ++frame) {
                         decoded[frame] = (flags & AUDCLNT_BUFFERFLAGS_SILENT) ? Frame{} :
                             stream.format.read(data + static_cast<size_t>(offset + frame) * stream.format.stride);
+                        signal |= std::abs(decoded[frame].left) >= 0.001f || std::abs(decoded[frame].right) >= 0.001f;
+                    }
                     const auto active = count.load(std::memory_order_acquire);
                     for (uint32_t index = 0; index < active; ++index) {
                         auto& destination = *outputs[index];
@@ -138,6 +143,7 @@ struct se_session {
                     }
                     offset += chunk;
                 }
+                if (signal) last_signal.store(GetTickCount64(), std::memory_order_relaxed);
                 if (const auto result = input->ReleaseBuffer(frames); FAILED(result)) return result;
             }
         }
@@ -179,6 +185,7 @@ struct se_session {
         auto last_overruns = output.stats.overruns.load();
         auto last_delay = output.delay.load();
         const auto render_rate = stream.format.rate;
+        TestTone tone(render_rate);
         const auto period_ms = milliseconds(stream.period_frames, render_rate);
         const uint32_t base_ms = std::clamp(static_cast<uint32_t>(period_ms * 3), 60u, 200u);
         Resampler resampler;
@@ -224,26 +231,33 @@ struct se_session {
             if (input_rate && ready >= target) primed = true;
 
             if (const auto hr = sink->GetBuffer(frames, &buffer); FAILED(hr)) return hr;
+            const float gain = paused.load(std::memory_order_relaxed) ? 0.0f : output.gain.load(std::memory_order_relaxed);
+            const auto test_before = output.test_before.exchange(0, std::memory_order_relaxed);
+            if (test_before && test_before >= GetTickCount64() && gain > 0) tone.start();
+            const bool testing = tone.active() && gain > 0;
+            auto write = [&](uint32_t index, Frame frame) noexcept {
+                if (tone.active()) {
+                    const auto sample = tone.next();
+                    frame = {sample, sample};
+                }
+                stream.format.write(buffer + static_cast<size_t>(index) * stream.format.stride,
+                    {frame.left * gain, frame.right * gain});
+            };
             uint32_t rendered = 0;
             if (input_rate && primed && output.enabled.load(std::memory_order_relaxed)) {
                 resampler.adjust(milliseconds(ready, input_rate) - milliseconds(target, input_rate),
                     static_cast<float>(frames) / static_cast<float>(render_rate));
-                const float gain = output.gain.load(std::memory_order_relaxed);
-                rendered = resampler.render(output.input, frames, nominal_step, output.kernel,
-                    [&](uint32_t index, Frame frame) {
-                        stream.format.write(buffer + static_cast<size_t>(index) * stream.format.stride,
-                            {frame.left * gain, frame.right * gain});
-                    });
+                rendered = resampler.render(output.input, frames, nominal_step, output.kernel, write);
                 if (rendered != frames) {
                     ++output.stats.underruns;
                     primed = false;
                     resampler.reset();
                 }
             }
-            if (rendered)
+            if (rendered || tone.active())
                 for (uint32_t frame = rendered; frame < frames; ++frame)
-                    stream.format.write(buffer + static_cast<size_t>(frame) * stream.format.stride, {});
-            if (const auto hr = sink->ReleaseBuffer(frames, rendered ? 0 : AUDCLNT_BUFFERFLAGS_SILENT);
+                    write(frame, {});
+            if (const auto hr = sink->ReleaseBuffer(frames, gain > 0 && (rendered || testing) ? 0 : AUDCLNT_BUFFERFLAGS_SILENT);
                 FAILED(hr)) return hr;
 
             const float queue_ms = input_rate ? milliseconds(output.input.available(), input_rate) : 0;
@@ -289,12 +303,14 @@ struct se_session {
     Event stop;
     std::atomic<uint32_t> count{0};
     std::atomic<uint64_t> capture_format{0};
+    std::atomic<uint64_t> last_signal{0};
+    std::atomic<bool> paused{false};
     Counters source_stats;
     std::array<std::unique_ptr<Output>, max_outputs> outputs;
     std::thread capture;
 };
 
-uint32_t __cdecl se_abi_version() { return 1; }
+uint32_t __cdecl se_abi_version() { return 2; }
 
 int32_t __cdecl se_enumerate(se_endpoint_callback callback, void* context) {
     return guarded([&] { return enumerate(callback, context); });
@@ -352,5 +368,27 @@ int32_t __cdecl se_output_status(se_session* session, const wchar_t* endpoint, s
     const auto* output = session->find(endpoint);
     if (!output) return HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
     *status = output->stats.read();
+    return S_OK;
+}
+
+int32_t __cdecl se_set_paused(se_session* session, uint32_t paused) {
+    if (!session || paused > 1) return E_INVALIDARG;
+    session->paused.store(paused != 0, std::memory_order_relaxed);
+    return S_OK;
+}
+
+int32_t __cdecl se_source_signal(se_session* session, uint32_t* present) {
+    if (!session || !present) return E_POINTER;
+    const auto recent = session->last_signal.load(std::memory_order_relaxed);
+    *present = recent && GetTickCount64() - recent <= 2500 ? 1u : 0u;
+    return S_OK;
+}
+
+int32_t __cdecl se_test_output(se_session* session, const wchar_t* endpoint) {
+    if (!session || !valid_id(endpoint)) return E_INVALIDARG;
+    auto* output = session->find(endpoint);
+    if (!output || !output->enabled.load() || output->stats.state.load() != SE_STREAMING ||
+        session->paused.load() || output->gain.load() <= 0) return HRESULT_FROM_WIN32(ERROR_NOT_READY);
+    output->test_before.store(GetTickCount64() + 350, std::memory_order_relaxed);
     return S_OK;
 }

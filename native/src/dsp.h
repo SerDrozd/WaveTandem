@@ -21,6 +21,28 @@ inline float mono(Frame frame) noexcept {
     return (frame.left + frame.right) * 0.5f;
 }
 
+class TestTone {
+public:
+    explicit TestTone(uint32_t rate) noexcept : rate_(rate), position_(rate * 350 / 1000) {}
+    void start() noexcept { position_ = 0; }
+    bool active() const noexcept { return position_ < rate_ * 350 / 1000; }
+    float next() noexcept {
+        const auto position = position_++;
+        const auto length = rate_ / 8;
+        const auto second = rate_ * 225 / 1000;
+        const auto offset = position >= second ? position - second : position;
+        if (offset >= length) return 0;
+        const auto fade = std::min({offset, length - offset - 1, rate_ / 125});
+        const float envelope = static_cast<float>(fade) / static_cast<float>(rate_ / 125);
+        const double phase = 2 * std::numbers::pi * 660 * offset / rate_;
+        return 0.07f * envelope * static_cast<float>(std::sin(phase));
+    }
+
+private:
+    uint32_t rate_;
+    uint32_t position_;
+};
+
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4324) // Keep the two cursors on independent cache lines.

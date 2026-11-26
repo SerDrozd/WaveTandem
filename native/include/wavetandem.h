@@ -43,6 +43,9 @@ SE_API int32_t __cdecl se_output(se_session* session, const wchar_t* endpoint,
     uint32_t enabled, float gain, uint32_t delay_ms);
 SE_API int32_t __cdecl se_source_status(se_session* session, se_status* status);
 SE_API int32_t __cdecl se_output_status(se_session* session, const wchar_t* endpoint, se_status* status);
+SE_API int32_t __cdecl se_set_paused(se_session* session, uint32_t paused);
+SE_API int32_t __cdecl se_source_signal(se_session* session, uint32_t* present);
+SE_API int32_t __cdecl se_test_output(se_session* session, const wchar_t* endpoint);
 
 #ifdef __cplusplus
 }

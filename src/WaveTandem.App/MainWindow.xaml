@@ -1,47 +1,26 @@
 <Window x:Class="WaveTandem.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="WaveTandem" Width="820" Height="700" MinWidth="520" MinHeight="460"
+        Title="WaveTandem" Width="760" Height="665" MinWidth="550" MinHeight="470"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True"
         Background="{DynamicResource Canvas}" Foreground="{DynamicResource Ink}"
         FontFamily="Segoe UI Variable, Segoe UI" FontSize="14">
   <Grid Background="{DynamicResource Canvas}">
     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
 
-    <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1"
-            Padding="24,15">
-      <StackPanel Orientation="Horizontal">
-        <TextBlock Text="&#xE7F6;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource Accent}"
-                   FontSize="21" VerticalAlignment="Center" IsHitTestVisible="False" />
-        <TextBlock Text="WaveTandem" FontSize="22" FontWeight="SemiBold" Margin="12,0,0,0" />
-      </StackPanel>
-    </Border>
-
-    <TabControl Grid.Row="1" Background="{DynamicResource Canvas}" BorderThickness="0" Padding="0"
-                Margin="20,12,20,0">
+    <TabControl Background="{DynamicResource Canvas}" BorderThickness="0" Padding="0" Margin="16,10,16,0">
       <TabItem Header="{Binding Text[SharingTab]}">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="2,12,10,16">
-          <StackPanel IsEnabled="{Binding CanEdit}">
-            <Border Background="{DynamicResource InfoSurface}" CornerRadius="6" Padding="15,12" Margin="0,0,0,12"
-                    Visibility="{Binding ShowWelcome, Converter={StaticResource VisibleWhen}}">
-              <DockPanel LastChildFill="True">
-                <Button DockPanel.Dock="Right" Content="{Binding Text[Dismiss]}" Click="DismissWelcome"
-                        VerticalAlignment="Top" Margin="12,0,0,0" />
-                <StackPanel>
-                  <TextBlock Text="{Binding Text[WelcomeTitle]}" Style="{StaticResource Heading}" />
-                  <TextBlock Text="{Binding Text[WelcomeBody]}" Style="{StaticResource Secondary}" Margin="0,4,0,0" />
-                </StackPanel>
-              </DockPanel>
-            </Border>
-
-            <Border Style="{StaticResource Panel}" Margin="0,0,0,12">
+          <StackPanel IsEnabled="{Binding CanEdit}" Margin="6,0,2,0">
+            <Border Style="{StaticResource Panel}" Margin="0,0,0,9">
               <StackPanel>
-                <TextBlock Text="{Binding Text[MainOutput]}" Style="{StaticResource Heading}" />
-                <TextBlock Text="{Binding Text[SourceHelp]}" Style="{StaticResource Secondary}" Margin="0,3,0,9" />
+                <DockPanel Margin="0,0,0,7">
+                  <Button DockPanel.Dock="Right" Content="{Binding Text[SoundSettings]}" Click="OpenSoundSettings" Margin="8,0,0,0" />
+                  <TextBlock Text="{Binding Text[MainOutput]}" Style="{StaticResource Heading}" VerticalAlignment="Center" />
+                </DockPanel>
                 <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding Source, Mode=TwoWay}"
                           ToolTip="{Binding Source.SourceLabel}" IsEnabled="{Binding CanSelectSource}"
                           AutomationProperties.Name="{Binding Text[MainOutput]}" MinHeight="34">
@@ -51,14 +30,23 @@
                     </DataTemplate>
                   </ComboBox.ItemTemplate>
                 </ComboBox>
+                <DockPanel Margin="0,8,0,0">
+                  <TextBlock DockPanel.Dock="Right" Text="{Binding SignalLabel}" Foreground="{DynamicResource Accent}"
+                             VerticalAlignment="Center" Margin="10,0,0,0" />
+                  <CheckBox Content="{Binding Text[FollowDefault]}" IsChecked="{Binding FollowDefault}"
+                            IsEnabled="{Binding CanEditRoute}" ToolTip="{Binding Text[FollowTip]}" />
+                </DockPanel>
               </StackPanel>
             </Border>
 
             <Border Style="{StaticResource Panel}">
               <StackPanel>
-                <TextBlock Text="{Binding Text[Listeners]}" Style="{StaticResource Heading}" />
-                <TextBlock Text="{Binding Text[ListenersHelp]}" Style="{StaticResource Secondary}" Margin="0,3,0,10" />
-                <Grid Margin="0,0,0,6">
+                <DockPanel Margin="0,0,0,8">
+                  <TextBlock DockPanel.Dock="Right" Text="{Binding OutputCountLabel}" Style="{StaticResource Secondary}"
+                             VerticalAlignment="Center" Margin="10,0,0,0" />
+                  <TextBlock Text="{Binding Text[Listeners]}" Style="{StaticResource Heading}" />
+                </DockPanel>
+                <Grid Margin="0,0,0,7">
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
@@ -70,7 +58,7 @@
                   <Button Grid.Column="2" Content="{Binding Text[Refresh]}" Click="RefreshDevices" Margin="8,0,0,0" />
                 </Grid>
                 <CheckBox Content="{Binding Text[ShowTiming]}" IsChecked="{Binding Advanced}" Margin="0,3,0,8" />
-                <TextBlock Text="{Binding Text[NoOutputs]}" Style="{StaticResource Secondary}"
+                <TextBlock Text="{Binding EmptyOutputs}" Style="{StaticResource Secondary}"
                            Visibility="{Binding NoOutputs, Converter={StaticResource VisibleWhen}}" Margin="0,10,0,3" />
                 <ItemsControl ItemsSource="{Binding Outputs}" IsEnabled="{Binding CanConfigure}">
                   <ItemsControl.ItemTemplate>
@@ -81,6 +69,7 @@
                             <Grid.ColumnDefinitions>
                               <ColumnDefinition Width="*" />
                               <ColumnDefinition Width="Auto" />
+                              <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <CheckBox IsChecked="{Binding Enabled}" ToolTip="{Binding Name}"
                                       AutomationProperties.Name="{Binding Name}" VerticalContentAlignment="Center">
@@ -88,6 +77,24 @@
                             </CheckBox>
                             <TextBlock Grid.Column="1" Text="{Binding Connection}" Style="{StaticResource Secondary}"
                                        VerticalAlignment="Center" Margin="14,0,0,0" />
+                            <Button Grid.Column="2" Content="{Binding Text[TestSound]}" Click="TestListener" Margin="10,0,0,0"
+                                    Visibility="{Binding Enabled, Converter={StaticResource VisibleWhen}}"
+                                    ToolTip="{Binding Text[TestSoundTip]}" AutomationProperties.Name="{Binding Text[TestSound]}">
+                              <Button.Style>
+                                <Style TargetType="Button">
+                                  <Setter Property="IsEnabled" Value="False" />
+                                  <Style.Triggers>
+                                    <MultiDataTrigger>
+                                      <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding CanTest}" Value="True" />
+                                        <Condition Binding="{Binding DataContext.CanTestOutputs, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                                      </MultiDataTrigger.Conditions>
+                                      <Setter Property="IsEnabled" Value="True" />
+                                    </MultiDataTrigger>
+                                  </Style.Triggers>
+                                </Style>
+                              </Button.Style>
+                            </Button>
                           </Grid>
                           <Grid Margin="27,5,0,0" Visibility="{Binding Enabled, Converter={StaticResource VisibleWhen}}">
                             <Grid.ColumnDefinitions>
@@ -128,6 +135,29 @@
                 </ItemsControl>
               </StackPanel>
             </Border>
+            <Expander Header="{Binding Text[SavedSetups]}" Margin="0,12,0,0" IsEnabled="{Binding CanEditRoute}"
+                      ToolTip="{Binding Text[SetupsTip]}">
+              <StackPanel Margin="0,8,0,0">
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Content="{Binding Text[DeleteSetup]}" Click="DeleteSetup"
+                          IsEnabled="{Binding HasSelectedSetup}" Margin="8,0,0,0" />
+                  <Button DockPanel.Dock="Right" Content="{Binding Text[LoadSetup]}" Click="LoadSetup"
+                          IsEnabled="{Binding HasSelectedSetup}" Margin="8,0,0,0" />
+                  <ComboBox ItemsSource="{Binding Setups}" SelectedItem="{Binding SelectedSetup}" DisplayMemberPath="Name"
+                            AutomationProperties.Name="{Binding Text[SavedSetups]}" />
+                </DockPanel>
+                <DockPanel Margin="0,7,0,0">
+                  <Button DockPanel.Dock="Right" Content="{Binding Text[SaveSetup]}" Click="SaveSetup" Margin="8,0,0,0" />
+                  <Label Content="{Binding Text[SetupName]}" Target="{Binding ElementName=SetupNameBox}" Padding="0,4,8,0" />
+                  <TextBox x:Name="SetupNameBox" MaxLength="40" Text="{Binding SetupName, UpdateSourceTrigger=PropertyChanged}" />
+                </DockPanel>
+                <TextBlock Text="{Binding SetupFeedback}" Style="{StaticResource Secondary}" Margin="0,5,0,0" />
+              </StackPanel>
+            </Expander>
+            <DockPanel Margin="0,12,0,0" Visibility="{Binding ShowWelcome, Converter={StaticResource VisibleWhen}}">
+              <Button DockPanel.Dock="Right" Content="{Binding Text[Dismiss]}" Click="DismissWelcome" Margin="8,0,0,0" />
+              <TextBlock Text="{Binding Text[WelcomeBody]}" Style="{StaticResource Secondary}" VerticalAlignment="Center" />
+            </DockPanel>
           </StackPanel>
         </ScrollViewer>
       </TabItem>
@@ -136,7 +166,11 @@
           <StackPanel>
             <Border Style="{StaticResource Panel}" Margin="0,0,0,12">
               <StackPanel>
-                <TextBlock Text="{Binding Text[MainOutput]}" Style="{StaticResource Heading}" />
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Content="{Binding Text[CopyDiagnostics]}" Click="CopyDiagnostics" />
+                  <TextBlock Text="{Binding Text[MainOutput]}" Style="{StaticResource Heading}" VerticalAlignment="Center" />
+                </DockPanel>
+                <TextBlock x:Name="ClipboardStatus" Style="{StaticResource Secondary}" AutomationProperties.LiveSetting="Polite" />
                 <TextBlock Text="{Binding SourceDiagnostics}" Style="{StaticResource Secondary}" Margin="0,7,0,0" />
               </StackPanel>
             </Border>
@@ -192,7 +226,7 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="2,12,10,16">
           <Border Style="{StaticResource Panel}">
             <StackPanel>
-              <TextBlock Text="{Binding Text[AboutTitle]}" Style="{StaticResource Heading}" />
+              <TextBlock Text="{Binding VersionLabel}" Style="{StaticResource Heading}" />
               <TextBlock Text="{Binding Text[AboutBody]}" Style="{StaticResource Secondary}" Margin="0,7,0,14" />
               <TextBlock Text="{Binding Text[License]}" TextWrapping="Wrap" />
             </StackPanel>
@@ -201,17 +235,20 @@
       </TabItem>
     </TabControl>
 
-    <Border Grid.Row="2" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0"
-            Padding="24,13">
+    <Border Grid.Row="1" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0"
+            Padding="22,10">
       <Grid>
-        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
         <StackPanel VerticalAlignment="Center">
           <TextBlock Text="{Binding Status}" FontWeight="SemiBold" AutomationProperties.LiveSetting="Polite" TextWrapping="Wrap" />
           <TextBlock Text="{Binding Notice}" Style="{StaticResource Secondary}" AutomationProperties.LiveSetting="Polite" />
         </StackPanel>
-        <Button Grid.Column="1" Content="{Binding ToggleLabel}" IsEnabled="{Binding CanToggle}"
-                Click="ToggleSharing" FontWeight="SemiBold" MinWidth="186" Padding="18,8"
-                Margin="14,0,0,0" VerticalAlignment="Center" />
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+          <Button Content="{Binding PauseLabel}" IsEnabled="{Binding CanPause}" Click="PauseCopies"
+                  Visibility="{Binding Sharing, Converter={StaticResource VisibleWhen}}" Margin="0,0,8,0" />
+          <Button Content="{Binding ToggleLabel}" IsEnabled="{Binding CanToggle}" Click="ToggleSharing"
+                  ToolTip="{Binding Text[StartShortcut]}" FontWeight="SemiBold" MinWidth="166" Padding="13,7" />
+        </StackPanel>
       </Grid>
     </Border>
   </Grid>

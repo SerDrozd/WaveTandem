@@ -48,9 +48,33 @@ public sealed class SettingsTests : IDisposable
         Assert.Null(result.Error);
         Assert.Equal(1, result.Preferences.Version);
         Assert.Equal("en", result.Preferences.Language);
-        Assert.Equal("system", result.Preferences.Theme);
+        Assert.Equal("light", result.Preferences.Theme);
         Assert.Single(result.Preferences.Outputs);
         Assert.Equal(new DevicePreference("output", new(true, 100, false, 0)), result.Preferences.Outputs["output"]);
+    }
+
+    [Fact]
+    public void SavedSetupsRoundTripAndDeduplicateNames()
+    {
+        var profile = new DevicePreference("Headphones", new(true, 54, false, 95));
+        Store.Save(new Preferences
+        {
+            Theme = "system",
+            FollowDefault = true,
+            Setups =
+            [
+                new(" Movie night ", true, null, null, new() { ["listener"] = profile }),
+                new("movie night", false, "old-source", null, new()),
+                new(" ", false, null, null, new())
+            ]
+        });
+        var preferences = Store.Load().Preferences;
+        Assert.Equal("light", preferences.Theme);
+        Assert.True(preferences.FollowDefault);
+        var setup = Assert.Single(preferences.Setups);
+        Assert.Equal("Movie night", setup.Name);
+        Assert.True(setup.FollowDefault);
+        Assert.Equal(profile, setup.Outputs["listener"]);
     }
 
     [Theory]

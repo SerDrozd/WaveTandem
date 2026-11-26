@@ -72,7 +72,9 @@ public sealed class DeviceRow : Bindable
         StreamState.Connecting => Text["Connecting"],
         _ => IsActive ? Text["Available"] : Text["Unavailable"]
     };
-    public string SourceLabel => IsDefault ? Text.Format("DefaultDevice", Name) : Name;
+    public string SourceLabel => !IsActive ? Text.Format("OfflineDevice", Name) :
+        IsDefault ? Text.Format("DefaultDevice", Name) : Name;
+    public bool CanTest => Enabled && IsActive && !Muted && Volume > 0 && status?.State == StreamState.Streaming;
     public string FormatLabel => endpoint.SampleRate == 0 ? Text["FormatUnknown"] :
         Text.Format("DeviceFormat", endpoint.SampleRate, endpoint.Channels);
     public string Diagnostics => status is null ? FormatLabel : Text.Format("OutputMetrics",
@@ -91,8 +93,9 @@ public sealed class DeviceRow : Bindable
         endpoint = value;
         status = streamStatus;
         if (previous.Name != value.Name) Changed(nameof(Name));
-        if (previous.Name != value.Name || previous.IsDefault != value.IsDefault) Changed(nameof(SourceLabel));
+        if (previous.Name != value.Name || previous.IsDefault != value.IsDefault || previous.State != value.State) Changed(nameof(SourceLabel));
         Changed(nameof(Connection));
+        Changed(nameof(CanTest));
         Changed(nameof(Diagnostics));
     }
 
@@ -114,6 +117,7 @@ public sealed class DeviceRow : Bindable
         if (previous.Volume != value.Volume) Changed(nameof(Volume));
         if (previous.Muted != value.Muted) Changed(nameof(Muted));
         if (previous.DelayMs != value.DelayMs) Changed(nameof(Delay));
+        Changed(nameof(CanTest));
         edited(this, previous);
     }
 }

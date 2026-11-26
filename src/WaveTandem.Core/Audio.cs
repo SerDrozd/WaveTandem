@@ -12,7 +12,7 @@ public sealed record StreamStatus(StreamState State, int Error, ulong Underruns,
     ulong Reconnects, ulong Position, ulong Timestamp100Ns, float QueueMs, float LatencyMs,
     float DriftPpm, uint Discontinuities);
 
-public sealed record AudioSnapshot(StreamStatus Source, IReadOnlyDictionary<string, StreamStatus> Outputs);
+public sealed record AudioSnapshot(StreamStatus Source, IReadOnlyDictionary<string, StreamStatus> Outputs, bool HasSignal);
 
 public sealed record OutputProfile(bool Enabled = false, int Volume = 80, bool Muted = false, int DelayMs = 0)
 {
@@ -37,6 +37,8 @@ public interface IAudioEngine : IDisposable
     IReadOnlyList<Endpoint> Enumerate();
     void Start(string sourceId, IReadOnlyDictionary<string, OutputProfile> outputs);
     void Configure(string id, OutputProfile profile);
+    void SetPaused(bool paused);
+    void TestOutput(string id);
     AudioSnapshot? Snapshot();
     void Stop();
 }

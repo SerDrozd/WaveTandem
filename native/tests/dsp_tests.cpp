@@ -107,6 +107,19 @@ int main(int argc, char** argv) {
     check_independent_clocks(650);
     check_independent_clocks(-650);
 
+    TestTone tone(48000);
+    expect(!tone.active(), "test sound starts idle");
+    tone.start();
+    float peak = 0;
+    uint32_t elapsed = 0;
+    while (tone.active()) {
+        const auto sample = tone.next();
+        peak = std::max(peak, std::abs(sample));
+        if (elapsed >= 6000 && elapsed < 10800) expect(sample == 0, "gap between test pulses");
+        ++elapsed;
+    }
+    expect(elapsed == 16800 && peak > 0.06f && peak <= 0.07f, "brief, bounded two-pulse test");
+
     Ring concurrent(127);
     constexpr uint32_t frames = 200000;
     std::thread producer([&] {

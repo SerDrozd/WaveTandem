@@ -11,7 +11,7 @@ try {
     $en = Get-Content 'src/WaveTandem.App/Localization/en.json' -Raw | ConvertFrom-Json -AsHashtable
     $sources = Get-ChildItem -LiteralPath 'src/WaveTandem.App' -File -Recurse -Include '*.cs','*.xaml' |
         Where-Object { $_.FullName -notmatch '[\\/](obj|bin)[\\/]' }
-    foreach ($key in ($sources | Select-String -AllMatches '(?:Text\["|Text\[|Text\.Format\(")([A-Za-z]+)(?="|\])' |
+    foreach ($key in ($sources | Select-String -AllMatches '(?:Text\["|Text\[|Text\.Format\(")([A-Z][A-Za-z]+)(?="|\])' -CaseSensitive |
             ForEach-Object { $_.Matches.Groups | Where-Object Name -eq '1' | Select-Object -ExpandProperty Value } |
             Sort-Object -Unique)) {
         if (!$en.Contains($key)) { throw "Missing English string $key." }

@@ -57,7 +57,7 @@ bool capture_silent_packets(se_session* session, const std::wstring& id) {
 }
 
 int main(int argc, char** argv) {
-    if (se_abi_version() != 1 || se_enumerate(nullptr, nullptr) >= 0) return 1;
+    if (se_abi_version() != 2 || se_enumerate(nullptr, nullptr) >= 0) return 1;
     Endpoints endpoints;
     const auto result = se_enumerate(report, &endpoints);
     if (result < 0) {
@@ -72,6 +72,8 @@ int main(int argc, char** argv) {
         const auto* absent = L"WaveTandem.test.absent.destination";
         const bool passed = se_output(session, absent, 1, 0, 501) < 0 &&
             se_output(session, absent, 1, 0, 0) >= 0 &&
+            se_set_paused(session, 2) < 0 && se_set_paused(session, 1) >= 0 &&
+            se_test_output(session, absent) < 0 && se_set_paused(session, 0) >= 0 &&
             wait_for(session, nullptr, SE_RETRYING) &&
             wait_for(session, absent, SE_RETRYING) &&
             se_output(session, absent, 0, 0, 0) >= 0 &&
